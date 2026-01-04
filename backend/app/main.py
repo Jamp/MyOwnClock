@@ -105,6 +105,55 @@ async def get_system_info():
     )
 
 
+@app.get("/api/battery")
+async def get_battery_info():
+    """Obtiene información de la batería del sistema"""
+    try:
+        # Intentar leer desde /sys/class/power_supply/
+        battery_path = Path("/sys/class/power_supply/BAT0")
+        if not battery_path.exists():
+            battery_path = Path("/sys/class/power_supply/BAT1")
+
+        if battery_path.exists():
+            # Leer capacidad
+            capacity_file = battery_path / "capacity"
+            capacity = int(capacity_file.read_text().strip()) if capacity_file.exists() else None
+
+            # Leer estado (Charging, Discharging, Full, Not charging)
+            status_file = battery_path / "status"
+            status = status_file.read_text().strip() if status_file.exists() else "Unknown"
+
+            return {
+                "available": True,
+                "percent": capacity,
+                "status": status,
+                "charging": status in ["Charging", "Full", "Not charging"]
+            }
+
+        # Fallback: usar acpi command
+        result = subprocess.run(["acpi", "-b"], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout:
+            # Parse: "Battery 0: Discharging, 85%, 02:30:00 remaining"
+            output = result.stdout.strip()
+            charging = "Charging" in output or "Full" in output
+            # Extraer porcentaje
+            import re
+            match = re.search(r'(\d+)%', output)
+            percent = int(match.group(1)) if match else None
+
+            return {
+                "available": True,
+                "percent": percent,
+                "status": "Charging" if charging else "Discharging",
+                "charging": charging
+            }
+
+        return {"available": False, "percent": None, "status": "No battery", "charging": False}
+
+    except Exception as e:
+        return {"available": False, "percent": None, "status": str(e), "charging": False}
+
+
 @app.post("/api/system/timezone")
 async def set_timezone(timezone: str):
     """Establece la zona horaria del sistema (requiere permisos)"""

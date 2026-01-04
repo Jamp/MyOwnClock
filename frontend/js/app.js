@@ -29,6 +29,7 @@ const App = {
         await Clock.init();
         await Weather.init();
         await Calendar.init();
+        await Battery.init();
 
         // Event listeners
         this.setupEventListeners();

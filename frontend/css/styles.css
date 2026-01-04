@@ -273,7 +273,44 @@ body {
     right: 20px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+}
+
+/* Indicador de batería */
+.battery-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.battery-indicator.hidden {
+    display: none;
+}
+
+.battery-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: #64c8ff;
+}
+
+.battery-indicator.battery-charging .battery-icon svg {
+    stroke: #4caf50;
+}
+
+.battery-indicator.battery-low .battery-icon svg {
+    stroke: #ff9800;
+}
+
+.battery-indicator.battery-critical .battery-icon svg {
+    stroke: #f44336;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
 }
 
 .status-indicator {
