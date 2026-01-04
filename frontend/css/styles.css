@@ -271,7 +271,7 @@ body {
 .status-bar {
     position: fixed;
     bottom: 3rem;
-    right: 5rem;
+    right: 6rem;
     display: flex;
     align-items: center;
     gap: 15px;
