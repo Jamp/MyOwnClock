@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Own Clock
+Description=Splash screen para Own Clock
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/own-clock
+ScriptFile=/usr/share/plymouth/themes/own-clock/own-clock.script

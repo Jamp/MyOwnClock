@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Own Clock - Openbox autostart
+# Este script se ejecuta al iniciar la sesión de Openbox
+#
+
+# Desactivar salvapantallas y DPMS
+xset s off
+xset s noblank
+xset -dpms
+
+# Ocultar cursor después de 3 segundos de inactividad
+unclutter -idle 3 -root &
+
+# Esperar a que el backend esté listo
+sleep 5
+
+# Iniciar Chromium en modo kiosko
+chromium \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-session-crashed-bubble \
+    --disable-restore-session-state \
+    --no-first-run \
+    --start-fullscreen \
+    --disable-translate \
+    --disable-features=TranslateUI \
+    --disable-sync \
+    --disable-background-networking \
+    --disable-default-apps \
+    --disable-extensions \
+    --disable-component-extensions-with-background-pages \
+    --disable-background-timer-throttling \
+    --disable-backgrounding-occluded-windows \
+    --disable-renderer-backgrounding \
+    --disable-hang-monitor \
+    --disable-prompt-on-repost \
+    --disable-domain-reliability \
+    --disable-client-side-phishing-detection \
+    --disable-component-update \
+    --check-for-update-interval=31536000 \
+    --autoplay-policy=no-user-gesture-required \
+    http://localhost:8080 &
