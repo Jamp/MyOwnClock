@@ -36,7 +36,51 @@ const App = {
         // Event listeners
         this.setupEventListeners();
 
+        // Iniciar monitoreo de cambios remotos de configuración
+        this.setupRemoteConfigWatch();
+
         console.log('Own Clock iniciado correctamente');
+    },
+
+    /**
+     * Configura el monitoreo de cambios remotos de configuración
+     */
+    setupRemoteConfigWatch() {
+        // Registrar callback para cuando la config cambie remotamente
+        Config.onChange(async (newConfig) => {
+            console.log('Aplicando configuración remota...');
+
+            // Actualizar calendarios en memoria
+            this.selectedCalendars = {};
+            const calendars = newConfig.calendarEntities || [];
+            calendars.forEach(entry => {
+                if (entry.includes(':')) {
+                    const [entity, name] = entry.split(':', 2);
+                    this.selectedCalendars[entity.trim()] = name.trim();
+                } else {
+                    this.selectedCalendars[entry.trim()] = '';
+                }
+            });
+
+            // Actualizar módulos
+            if (Clock && newConfig.timezone) {
+                Clock.timezone = newConfig.timezone;
+                Clock.update();
+            }
+
+            if (Weather) {
+                await Weather.refresh();
+            }
+
+            if (Calendar) {
+                await Calendar.refresh();
+            }
+
+            console.log('Configuración remota aplicada');
+        });
+
+        // Iniciar watcher (cada 10 segundos)
+        Config.startWatching(10000);
     },
 
     /**

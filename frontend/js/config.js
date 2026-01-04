@@ -20,6 +20,11 @@ const Config = {
         ? 'http://localhost:8080'
         : '',
 
+    // Para detectar cambios remotos
+    _lastConfigHash: null,
+    _watchInterval: null,
+    _onChangeCallbacks: [],
+
     /**
      * Obtiene la configuración actual
      */
@@ -66,6 +71,8 @@ const Config = {
 
             if (response.ok) {
                 console.log('Configuración guardada en backend');
+                // Actualizar hash para no detectar nuestro propio cambio
+                this._lastConfigHash = this._hashConfig(newConfig);
                 return true;
             }
         } catch (error) {
@@ -89,6 +96,94 @@ const Config = {
     async getValue(key) {
         const config = await this.get();
         return config[key] ?? this.defaults[key];
+    },
+
+    /**
+     * Genera un hash simple de la configuración para detectar cambios
+     */
+    _hashConfig(config) {
+        const str = JSON.stringify({
+            haUrl: config.haUrl,
+            haToken: config.haToken,
+            weatherEntity: config.weatherEntity,
+            calendarEntities: config.calendarEntities,
+            timezone: config.timezone,
+            lastUpdate: config.lastUpdate
+        });
+        // Simple hash
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return hash.toString();
+    },
+
+    /**
+     * Registra un callback para cuando la configuración cambie remotamente
+     */
+    onChange(callback) {
+        this._onChangeCallbacks.push(callback);
+    },
+
+    /**
+     * Inicia el monitoreo de cambios remotos
+     * @param {number} interval - Intervalo en ms (default: 10 segundos)
+     */
+    async startWatching(interval = 10000) {
+        // Guardar hash inicial
+        const config = await this.get();
+        this._lastConfigHash = this._hashConfig(config);
+
+        // Limpiar intervalo anterior si existe
+        if (this._watchInterval) {
+            clearInterval(this._watchInterval);
+        }
+
+        // Iniciar polling
+        this._watchInterval = setInterval(async () => {
+            await this._checkForChanges();
+        }, interval);
+
+        console.log(`Config watcher iniciado (cada ${interval/1000}s)`);
+    },
+
+    /**
+     * Detiene el monitoreo de cambios
+     */
+    stopWatching() {
+        if (this._watchInterval) {
+            clearInterval(this._watchInterval);
+            this._watchInterval = null;
+            console.log('Config watcher detenido');
+        }
+    },
+
+    /**
+     * Verifica si hubo cambios remotos
+     */
+    async _checkForChanges() {
+        try {
+            const config = await this.get();
+            const newHash = this._hashConfig(config);
+
+            if (this._lastConfigHash && newHash !== this._lastConfigHash) {
+                console.log('Cambio de configuración detectado remotamente');
+                this._lastConfigHash = newHash;
+
+                // Notificar a todos los callbacks
+                for (const callback of this._onChangeCallbacks) {
+                    try {
+                        await callback(config);
+                    } catch (e) {
+                        console.error('Error en callback de config:', e);
+                    }
+                }
+            }
+        } catch (error) {
+            // Silenciar errores de red durante polling
+        }
     }
 };
 

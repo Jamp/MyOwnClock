@@ -15,6 +15,7 @@ class ClockConfig(BaseModel):
     timezone: str = Field(default="America/Lima")
     update_interval: int = Field(default=60000, alias="updateInterval")
     clock_format: str = Field(default="24h", alias="clockFormat")
+    last_update: Optional[str] = Field(default=None, alias="lastUpdate")
 
     class Config:
         populate_by_name = True
@@ -26,7 +27,8 @@ class ClockConfig(BaseModel):
                 "calendarEntities": ["calendar.personal", "calendar.trabajo", "calendar.fechas"],
                 "timezone": "America/Lima",
                 "updateInterval": 60000,
-                "clockFormat": "24h"
+                "clockFormat": "24h",
+                "lastUpdate": "2024-01-01T00:00:00"
             }
         }
 

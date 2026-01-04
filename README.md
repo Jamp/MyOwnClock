@@ -137,22 +137,25 @@ own_clock/
 
 ### Configuración Remota
 
-Puedes configurar el reloj desde cualquier dispositivo en la misma red:
+Puedes configurar el reloj desde cualquier dispositivo en la misma red. **El reloj detecta automáticamente los cambios cada 10 segundos y se actualiza sin necesidad de reiniciar.**
 
 ```bash
 # Ver configuración actual
 curl http://<ip-del-laptop>:8080/api/config
 
-# Guardar configuración
+# Guardar configuración (el reloj se actualizará automáticamente)
 curl -X POST http://<ip-del-laptop>:8080/api/config \
   -H "Content-Type: application/json" \
   -d '{
-    "ha_url": "http://homeassistant.local:8123",
-    "ha_token": "tu-token-aqui",
-    "weather_entity": "weather.openweathermap",
-    "calendar_entities": ["calendar.personal:Personal", "calendar.trabajo:Trabajo"],
+    "haUrl": "http://homeassistant.local:8123",
+    "haToken": "tu-token-aqui",
+    "weatherEntity": "weather.openweathermap",
+    "calendarEntities": ["calendar.personal:Personal", "calendar.trabajo:Trabajo"],
     "timezone": "America/Lima"
   }'
+
+# Forzar actualización inmediata (refresca clima y calendario)
+curl -X POST http://<ip-del-laptop>:8080/api/refresh
 ```
 
 ### API Endpoints
@@ -169,6 +172,7 @@ curl -X POST http://<ip-del-laptop>:8080/api/config \
 | `/api/calendar` | GET | Eventos del calendario (proxy a HA) |
 | `/api/calendars` | GET | Lista de calendarios disponibles |
 | `/api/battery` | GET | Estado de la batería |
+| `/api/refresh` | POST | Forzar actualización del reloj |
 | `/docs` | GET | Documentación Swagger UI |
 
 ## Personalización

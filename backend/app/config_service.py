@@ -5,6 +5,7 @@ Maneja la persistencia de la configuración en archivo JSON
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -42,6 +43,9 @@ class ConfigService:
         try:
             # Usar by_alias para mantener camelCase en el JSON
             data = config.model_dump(by_alias=True)
+
+            # Actualizar timestamp
+            data["lastUpdate"] = datetime.now().isoformat()
 
             with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)

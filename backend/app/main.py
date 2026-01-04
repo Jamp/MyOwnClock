@@ -77,6 +77,18 @@ async def reset_config():
     return config_service.reset_config()
 
 
+@app.post("/api/refresh")
+async def trigger_refresh():
+    """
+    Fuerza una actualización del reloj cambiando el timestamp de la config.
+    El frontend detectará el cambio y refrescará automáticamente.
+    """
+    config = config_service.get_config()
+    # Actualizar timestamp para forzar detección de cambio
+    config_service.save_config(config)
+    return {"status": "ok", "message": "Refresh triggered"}
+
+
 @app.get("/api/system", response_model=SystemInfo)
 async def get_system_info():
     """Obtiene información del sistema"""
