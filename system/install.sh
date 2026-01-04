@@ -57,6 +57,7 @@ install_system_deps() {
         plymouth \
         plymouth-themes \
         imagemagick \
+        librsvg2-bin \
         acpi \
         --no-install-recommends
 }
