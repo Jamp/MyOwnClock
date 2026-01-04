@@ -1,0 +1,219 @@
+/**
+ * Módulo del calendario
+ * Integración con Google Calendar via Home Assistant
+ */
+
+const Calendar = {
+    events: [],
+    updateInterval: null,
+
+    /**
+     * Inicializa el módulo del calendario
+     */
+    async init() {
+        await this.fetchEvents();
+        // Actualizar cada 5 minutos
+        this.startAutoUpdate(300000);
+    },
+
+    /**
+     * Obtiene los eventos del calendario desde el backend
+     */
+    async fetchEvents() {
+        try {
+            const response = await fetch(`${Config.backendUrl}/api/calendar`);
+
+            if (response.status === 400) {
+                // Calendario no configurado
+                this.events = [];
+                this.updateUI();
+                return [];
+            }
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.detail || `HTTP ${response.status}`);
+            }
+
+            const events = await response.json();
+            this.events = this.processEvents(events);
+            this.updateUI();
+            return this.events;
+
+        } catch (error) {
+            console.error('Error obteniendo calendario:', error);
+            this.events = [];
+            this.updateUI();
+            return [];
+        }
+    },
+
+    /**
+     * Procesa y ordena los eventos
+     */
+    processEvents(events) {
+        if (!Array.isArray(events)) return [];
+
+        const now = new Date();
+
+        return events
+            .map(event => ({
+                summary: event.summary || 'Sin título',
+                start: new Date(event.start?.dateTime || event.start?.date),
+                end: new Date(event.end?.dateTime || event.end?.date),
+                allDay: !event.start?.dateTime,
+                location: event.location || '',
+                description: event.description || '',
+                calendar: event.calendar || '',
+                calendarEntity: event.calendar_entity || ''
+            }))
+            .filter(event => event.end >= now) // Solo eventos futuros o en curso
+            .sort((a, b) => a.start - b.start)
+            .slice(0, 5); // Máximo 5 eventos
+    },
+
+    /**
+     * Actualiza la interfaz con los eventos
+     */
+    updateUI() {
+        const container = document.getElementById('calendar-events');
+        if (!container) return;
+
+        if (this.events.length === 0) {
+            container.innerHTML = '<div class="no-events">Sin eventos próximos</div>';
+            return;
+        }
+
+        const eventsHtml = this.events.map(event => this.renderEvent(event)).join('');
+        container.innerHTML = eventsHtml;
+
+        // Re-renderizar iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    },
+
+    /**
+     * Renderiza un evento individual
+     */
+    renderEvent(event) {
+        const timeStr = this.formatEventTime(event);
+        const isToday = this.isToday(event.start);
+        const isTomorrow = this.isTomorrow(event.start);
+        const isNow = this.isHappening(event);
+
+        let dayLabel = '';
+        if (isToday) {
+            dayLabel = '<span class="event-day today">Hoy</span>';
+        } else if (isTomorrow) {
+            dayLabel = '<span class="event-day tomorrow">Mañana</span>';
+        } else {
+            dayLabel = `<span class="event-day">${this.formatDayName(event.start)}</span>`;
+        }
+
+        const nowClass = isNow ? 'event-now' : '';
+        const calendarBadge = event.calendar
+            ? `<span class="event-calendar">${this.escapeHtml(event.calendar)}</span>`
+            : '';
+
+        return `
+            <div class="event ${nowClass}">
+                <div class="event-time">
+                    ${dayLabel}
+                    <span class="event-hour">${timeStr}</span>
+                </div>
+                <div class="event-details">
+                    <div class="event-title">${this.escapeHtml(event.summary)}</div>
+                    ${calendarBadge}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Formatea la hora del evento
+     */
+    formatEventTime(event) {
+        if (event.allDay) {
+            return 'Todo el día';
+        }
+
+        const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+        return event.start.toLocaleTimeString('es-PE', options);
+    },
+
+    /**
+     * Formatea el nombre del día
+     */
+    formatDayName(date) {
+        const options = { weekday: 'short', day: 'numeric' };
+        return date.toLocaleDateString('es-PE', options);
+    },
+
+    /**
+     * Verifica si una fecha es hoy
+     */
+    isToday(date) {
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    },
+
+    /**
+     * Verifica si una fecha es mañana
+     */
+    isTomorrow(date) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return date.toDateString() === tomorrow.toDateString();
+    },
+
+    /**
+     * Verifica si un evento está en curso
+     */
+    isHappening(event) {
+        const now = new Date();
+        return now >= event.start && now <= event.end;
+    },
+
+    /**
+     * Escapa HTML para prevenir XSS
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
+    /**
+     * Inicia la actualización automática
+     */
+    startAutoUpdate(interval = 300000) {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
+
+        this.updateInterval = setInterval(() => {
+            this.fetchEvents();
+        }, interval);
+    },
+
+    /**
+     * Detiene la actualización automática
+     */
+    stopAutoUpdate() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    },
+
+    /**
+     * Fuerza una actualización inmediata
+     */
+    async refresh() {
+        return await this.fetchEvents();
+    }
+};
+
+// Exportar para uso global
+window.Calendar = Calendar;

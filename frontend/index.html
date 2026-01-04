@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Own Clock</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="clock-container">
+        <!-- Fecha (arriba) -->
+        <div class="date-section">
+            <div id="date" class="date">Cargando...</div>
+        </div>
+
+        <!-- Reloj principal -->
+        <div class="time-section">
+            <div id="time" class="time">00:00</div>
+            <div id="seconds" class="seconds">00</div>
+        </div>
+
+        <!-- Info panel: Clima y Calendario -->
+        <div class="info-panel">
+            <!-- Clima desde Home Assistant / OpenWeatherMap -->
+            <div class="weather-section">
+                <div class="weather-icon" id="weather-icon">
+                    <i data-lucide="cloud"></i>
+                </div>
+                <div class="weather-info">
+                    <div id="temperature" class="temperature">--°</div>
+                    <div id="weather-condition" class="condition">Conectando...</div>
+                </div>
+                <div class="weather-extra">
+                    <div class="weather-detail" title="Sensación térmica">
+                        <i data-lucide="thermometer"></i>
+                        <span id="feels-like">--°</span>
+                    </div>
+                    <div class="weather-detail" title="Humedad">
+                        <i data-lucide="droplets"></i>
+                        <span id="humidity">--%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eventos del calendario -->
+            <div class="calendar-section">
+                <div class="calendar-header">
+                    <i data-lucide="calendar"></i>
+                    <span>Próximos eventos</span>
+                </div>
+                <div id="calendar-events" class="calendar-events">
+                    <div class="no-events">Sin eventos próximos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicador de estado -->
+        <div class="status-bar">
+            <span id="ha-status" class="status-indicator disconnected"></span>
+            <span id="location-name" class="location-name"></span>
+        </div>
+    </div>
+
+    <!-- Configuración modal (oculto por defecto) -->
+    <div id="config-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Configuración</h2>
+            <form id="config-form">
+                <label>
+                    URL Home Assistant:
+                    <input type="text" id="ha-url" placeholder="http://homeassistant.local:8123">
+                </label>
+                <label>
+                    Token de acceso:
+                    <input type="password" id="ha-token" placeholder="Token de larga duración">
+                </label>
+                <label>
+                    Entidad del clima:
+                    <input type="text" id="weather-entity" placeholder="weather.openweathermap">
+                </label>
+                <label>
+                    Calendarios (entidad:nombre, uno por línea):
+                    <textarea id="calendar-entities" rows="3" placeholder="calendar.jamp_gold:Personal&#10;calendar.trabajo:Trabajo&#10;calendar.festivos_en_peru:Festivos"></textarea>
+                </label>
+                <label>
+                    Zona horaria:
+                    <select id="timezone">
+                        <option value="America/Lima">Lima</option>
+                        <option value="America/Mexico_City">Ciudad de México</option>
+                        <option value="America/New_York">Nueva York</option>
+                        <option value="America/Los_Angeles">Los Ángeles</option>
+                        <option value="America/Bogota">Bogotá</option>
+                        <option value="America/Santiago">Santiago</option>
+                        <option value="America/Buenos_Aires">Buenos Aires</option>
+                        <option value="Europe/Madrid">Madrid</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </label>
+                <div class="button-group">
+                    <button type="submit">Guardar</button>
+                    <button type="button" id="close-config">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/clock.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
