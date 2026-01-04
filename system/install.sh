@@ -85,9 +85,9 @@ setup_python() {
     python3 -m venv venv
     source venv/bin/activate
 
-    # Instalar dependencias
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    # Instalar dependencias (usar wheels pre-compilados para pydantic-core)
+    pip install --upgrade pip wheel
+    pip install --only-binary pydantic-core -r requirements.txt
 
     deactivate
     chown -R "$USER_NAME:$USER_NAME" "$INSTALL_DIR/backend/venv"
