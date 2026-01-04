@@ -130,7 +130,7 @@ async def get_battery_info():
                 "charging": status in ["Charging", "Full", "Not charging"]
             }
 
-        # Fallback: usar acpi command
+        # Fallback Linux: usar acpi command
         result = subprocess.run(["acpi", "-b"], capture_output=True, text=True)
         if result.returncode == 0 and result.stdout:
             # Parse: "Battery 0: Discharging, 85%, 02:30:00 remaining"
@@ -147,6 +147,24 @@ async def get_battery_info():
                 "status": "Charging" if charging else "Discharging",
                 "charging": charging
             }
+
+        # Fallback macOS: usar pmset
+        result = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout:
+            # Parse: "-InternalBattery-0 (id=...)	85%; charging; ..."
+            output = result.stdout.strip()
+            import re
+            match = re.search(r'(\d+)%', output)
+            percent = int(match.group(1)) if match else None
+            charging = "AC Power" in output or "charging" in output.lower()
+
+            if percent is not None:
+                return {
+                    "available": True,
+                    "percent": percent,
+                    "status": "Charging" if charging else "Discharging",
+                    "charging": charging
+                }
 
         return {"available": False, "percent": None, "status": "No battery", "charging": False}
 
