@@ -270,8 +270,8 @@ body {
 /* Barra de estado */
 .status-bar {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 3rem;
+    right: 5rem;
     display: flex;
     align-items: center;
     gap: 15px;
