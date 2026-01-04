@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Variables
 INSTALL_DIR="/opt/own_clock"
-USER_NAME="${SUDO_USER:-$USER}"
+USER_NAME="clock"
 SERVICE_NAME="own-clock"
 
 # Funciones de utilidad
@@ -35,6 +35,22 @@ check_root() {
     if [[ $EUID -ne 0 ]]; then
         log_error "Este script debe ejecutarse como root (sudo)"
         exit 1
+    fi
+}
+
+# Crear usuario clock si no existe
+create_user() {
+    log_info "Verificando usuario $USER_NAME..."
+
+    if id "$USER_NAME" &>/dev/null; then
+        log_info "Usuario $USER_NAME ya existe"
+    else
+        log_info "Creando usuario $USER_NAME..."
+        # Crear grupo si no existe
+        getent group "$USER_NAME" &>/dev/null || /usr/sbin/groupadd "$USER_NAME"
+        # Crear usuario
+        /usr/sbin/useradd -m -g "$USER_NAME" -s /bin/bash "$USER_NAME"
+        log_info "Usuario $USER_NAME creado"
     fi
 }
 
@@ -121,6 +137,9 @@ setup_autologin() {
     # Crear directorio para override de getty
     mkdir -p /etc/systemd/system/getty@tty1.service.d/
 
+    # Eliminar cualquier configuración anterior
+    rm -f /etc/systemd/system/getty@tty1.service.d/*.conf
+
     cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
 ExecStart=
@@ -134,18 +153,14 @@ EOF
 setup_auto_startx() {
     log_info "Configurando inicio automático de X..."
 
-    # Agregar startx al .bash_profile
+    # Crear .bash_profile
     BASH_PROFILE="/home/$USER_NAME/.bash_profile"
-
-    if ! grep -q "startx" "$BASH_PROFILE" 2>/dev/null; then
-        cat >> "$BASH_PROFILE" << 'EOF'
-
+    cat > "$BASH_PROFILE" << 'EOF'
 # Auto start X en tty1
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
     exec startx
 fi
 EOF
-    fi
 
     # Crear .xinitrc para iniciar Openbox
     XINITRC="/home/$USER_NAME/.xinitrc"
@@ -205,28 +220,64 @@ setup_plymouth() {
     # Crear directorio del tema
     mkdir -p "$PLYMOUTH_THEME_DIR"
 
-    # Convertir SVG a PNG
-    if command -v convert &> /dev/null; then
-        convert -background none "$INSTALL_DIR/system/plymouth/logo.svg" \
-            -resize 200x200 "$PLYMOUTH_THEME_DIR/logo.png"
-        convert -background none "$INSTALL_DIR/system/plymouth/progress.svg" \
-            -resize 300x6 "$PLYMOUTH_THEME_DIR/progress.png"
-    else
-        log_warn "ImageMagick no disponible, usando imágenes por defecto"
-        # Crear imágenes placeholder simples con base64
-        cp "$INSTALL_DIR/system/plymouth/logo.svg" "$PLYMOUTH_THEME_DIR/" 2>/dev/null || true
+    # Convertir SVG a PNG usando rsvg-convert (más confiable que ImageMagick)
+    if command -v rsvg-convert &> /dev/null; then
+        rsvg-convert -w 200 -h 200 "$INSTALL_DIR/system/plymouth/logo.svg" \
+            -o "$PLYMOUTH_THEME_DIR/logo.png" 2>/dev/null || true
+        rsvg-convert -w 300 -h 6 "$INSTALL_DIR/system/plymouth/progress.svg" \
+            -o "$PLYMOUTH_THEME_DIR/progress.png" 2>/dev/null || true
+    fi
+
+    # Si no se pudo convertir, crear un logo simple con ImageMagick
+    if [[ ! -f "$PLYMOUTH_THEME_DIR/logo.png" ]]; then
+        log_warn "Creando logo de Plymouth alternativo..."
+        convert -size 200x200 xc:'#1a1a2e' \
+            -fill '#64c8ff' -draw "circle 100,100 100,20" \
+            -fill '#1a1a2e' -draw "circle 100,100 100,35" \
+            -stroke white -strokewidth 4 \
+            -draw "line 100,100 100,50" \
+            -draw "line 100,100 140,100" \
+            "$PLYMOUTH_THEME_DIR/logo.png" 2>/dev/null || true
     fi
 
     # Copiar archivos del tema
-    cp "$INSTALL_DIR/system/plymouth/own-clock.plymouth" "$PLYMOUTH_THEME_DIR/"
-    cp "$INSTALL_DIR/system/plymouth/own-clock.script" "$PLYMOUTH_THEME_DIR/"
+    cp "$INSTALL_DIR/system/plymouth/own-clock.plymouth" "$PLYMOUTH_THEME_DIR/" 2>/dev/null || true
+    cp "$INSTALL_DIR/system/plymouth/own-clock.script" "$PLYMOUTH_THEME_DIR/" 2>/dev/null || true
+
+    # Si no existen los archivos de tema, crearlos
+    if [[ ! -f "$PLYMOUTH_THEME_DIR/own-clock.plymouth" ]]; then
+        cat > "$PLYMOUTH_THEME_DIR/own-clock.plymouth" << 'EOF'
+[Plymouth Theme]
+Name=Own Clock
+Description=Splash screen para Own Clock
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/own-clock
+ScriptFile=/usr/share/plymouth/themes/own-clock/own-clock.script
+EOF
+    fi
+
+    if [[ ! -f "$PLYMOUTH_THEME_DIR/own-clock.script" ]]; then
+        cat > "$PLYMOUTH_THEME_DIR/own-clock.script" << 'EOF'
+# Own Clock Plymouth Script
+Window.SetBackgroundTopColor(0.10, 0.10, 0.18);
+Window.SetBackgroundBottomColor(0.06, 0.08, 0.14);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(Window.GetWidth() / 2 - logo.image.GetWidth() / 2);
+logo.sprite.SetY(Window.GetHeight() / 2 - logo.image.GetHeight() / 2);
+logo.sprite.SetOpacity(1);
+EOF
+    fi
 
     # Instalar el tema
     update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth \
-        "$PLYMOUTH_THEME_DIR/own-clock.plymouth" 100
+        "$PLYMOUTH_THEME_DIR/own-clock.plymouth" 100 2>/dev/null || true
 
     # Establecer como tema por defecto
-    plymouth-set-default-theme own-clock
+    plymouth-set-default-theme own-clock 2>/dev/null || true
 
     # Configurar GRUB para splash silencioso
     if [[ -f /etc/default/grub ]]; then
@@ -256,9 +307,12 @@ show_summary() {
     echo ""
     echo "El sistema ha sido configurado como reloj de pared."
     echo ""
+    echo "Usuario creado: $USER_NAME"
+    echo ""
     echo "Características instaladas:"
     echo "  - Splash screen personalizado (Plymouth)"
-    echo "  - Autologin y auto-inicio de X"
+    echo "  - Autologin con usuario '$USER_NAME'"
+    echo "  - Auto-inicio de X con Openbox"
     echo "  - Chromium en modo kiosko"
     echo "  - Backend API en puerto 8080"
     echo ""
@@ -285,6 +339,7 @@ main() {
     log_info "============================================"
 
     check_root
+    create_user
     install_system_deps
     copy_files
     setup_python
