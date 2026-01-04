@@ -50,12 +50,14 @@ install_system_deps() {
         python3 \
         python3-pip \
         python3-venv \
+        build-essential \
         unclutter \
         x11-xserver-utils \
         pulseaudio \
         plymouth \
         plymouth-themes \
         imagemagick \
+        acpi \
         --no-install-recommends
 }
 
