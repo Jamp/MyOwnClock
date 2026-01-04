@@ -6,6 +6,8 @@
 const App = {
     configModal: null,
     configForm: null,
+    availableCalendars: [],
+    selectedCalendars: {},
 
     /**
      * Inicializa la aplicación
@@ -46,12 +48,19 @@ const App = {
         document.getElementById('ha-url').value = config.haUrl || '';
         document.getElementById('ha-token').value = config.haToken || '';
         document.getElementById('weather-entity').value = config.weatherEntity || 'weather.openweathermap';
-
-        // Calendarios: convertir array a texto (uno por línea)
-        const calendars = config.calendarEntities || [];
-        document.getElementById('calendar-entities').value = calendars.join('\n');
-
         document.getElementById('timezone').value = config.timezone || 'America/Lima';
+
+        // Cargar calendarios seleccionados en memoria
+        this.selectedCalendars = {};
+        const calendars = config.calendarEntities || [];
+        calendars.forEach(entry => {
+            if (entry.includes(':')) {
+                const [entity, name] = entry.split(':', 2);
+                this.selectedCalendars[entity.trim()] = name.trim();
+            } else {
+                this.selectedCalendars[entry.trim()] = '';
+            }
+        });
     },
 
     /**
@@ -92,6 +101,11 @@ const App = {
                 this.closeConfig();
             }
         });
+
+        // Cargar calendarios
+        document.getElementById('load-calendars').addEventListener('click', () => {
+            this.loadCalendars();
+        });
     },
 
     /**
@@ -100,6 +114,12 @@ const App = {
     openConfig() {
         this.configModal.classList.remove('hidden');
         document.body.style.cursor = 'default';
+        this.renderCalendarList();
+
+        // Re-renderizar iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
     },
 
     /**
@@ -111,15 +131,139 @@ const App = {
     },
 
     /**
+     * Carga los calendarios disponibles desde Home Assistant
+     */
+    async loadCalendars() {
+        const btn = document.getElementById('load-calendars');
+        const listEl = document.getElementById('calendar-list');
+
+        // Validar que hay configuración de HA
+        const haUrl = document.getElementById('ha-url').value.trim();
+        const haToken = document.getElementById('ha-token').value.trim();
+
+        if (!haUrl || !haToken) {
+            listEl.innerHTML = '<div class="calendar-loading">Ingresa URL y Token de Home Assistant primero</div>';
+            return;
+        }
+
+        // Mostrar loading
+        btn.classList.add('loading');
+        listEl.innerHTML = '<div class="calendar-loading">Cargando calendarios...</div>';
+
+        try {
+            const response = await fetch(`${Config.backendUrl}/api/calendars`);
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            this.availableCalendars = await response.json();
+            this.renderCalendarList();
+
+        } catch (error) {
+            console.error('Error cargando calendarios:', error);
+            listEl.innerHTML = `<div class="calendar-loading">Error: ${error.message}</div>`;
+        } finally {
+            btn.classList.remove('loading');
+
+            // Re-renderizar iconos de Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    },
+
+    /**
+     * Renderiza la lista de calendarios
+     */
+    renderCalendarList() {
+        const listEl = document.getElementById('calendar-list');
+
+        if (this.availableCalendars.length === 0) {
+            // Mostrar calendarios ya seleccionados si no hay lista cargada
+            const selectedKeys = Object.keys(this.selectedCalendars);
+            if (selectedKeys.length > 0) {
+                listEl.innerHTML = selectedKeys.map(entity => {
+                    const customName = this.selectedCalendars[entity] || '';
+                    const displayName = entity.replace('calendar.', '').replace(/_/g, ' ');
+                    return `
+                        <div class="calendar-item">
+                            <input type="checkbox"
+                                   id="cal-${entity}"
+                                   data-entity="${entity}"
+                                   checked>
+                            <div class="calendar-item-info">
+                                <div class="calendar-item-name">${displayName}</div>
+                                <div class="calendar-item-entity">${entity}</div>
+                            </div>
+                            <input type="text"
+                                   placeholder="Nombre"
+                                   data-entity="${entity}"
+                                   value="${customName}">
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listEl.innerHTML = '<div class="calendar-loading">Haz clic en "Cargar calendarios"</div>';
+            }
+            return;
+        }
+
+        listEl.innerHTML = this.availableCalendars.map(cal => {
+            const entity = cal.entity_id;
+            const isSelected = entity in this.selectedCalendars;
+            const customName = this.selectedCalendars[entity] || '';
+            const displayName = cal.name || entity.replace('calendar.', '').replace(/_/g, ' ');
+
+            return `
+                <div class="calendar-item">
+                    <input type="checkbox"
+                           id="cal-${entity}"
+                           data-entity="${entity}"
+                           ${isSelected ? 'checked' : ''}>
+                    <div class="calendar-item-info">
+                        <div class="calendar-item-name">${displayName}</div>
+                        <div class="calendar-item-entity">${entity}</div>
+                    </div>
+                    <input type="text"
+                           placeholder="Nombre personalizado"
+                           data-entity="${entity}"
+                           value="${customName}">
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Obtiene los calendarios seleccionados del formulario
+     */
+    getSelectedCalendars() {
+        const listEl = document.getElementById('calendar-list');
+        const checkboxes = listEl.querySelectorAll('input[type="checkbox"]');
+        const result = [];
+
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const entity = checkbox.dataset.entity;
+                const nameInput = listEl.querySelector(`input[type="text"][data-entity="${entity}"]`);
+                const customName = nameInput ? nameInput.value.trim() : '';
+
+                if (customName) {
+                    result.push(`${entity}:${customName}`);
+                } else {
+                    result.push(entity);
+                }
+            }
+        });
+
+        return result;
+    },
+
+    /**
      * Guarda la configuración
      */
     async saveConfig() {
-        // Procesar calendarios: texto a array (uno por línea)
-        const calendarsText = document.getElementById('calendar-entities').value;
-        const calendarEntities = calendarsText
-            .split('\n')
-            .map(c => c.trim())
-            .filter(c => c.length > 0);
+        const calendarEntities = this.getSelectedCalendars();
 
         const config = {
             haUrl: document.getElementById('ha-url').value.trim(),
@@ -132,6 +276,17 @@ const App = {
         const success = await Config.save(config);
 
         if (success) {
+            // Actualizar calendarios seleccionados en memoria
+            this.selectedCalendars = {};
+            calendarEntities.forEach(entry => {
+                if (entry.includes(':')) {
+                    const [entity, name] = entry.split(':', 2);
+                    this.selectedCalendars[entity.trim()] = name.trim();
+                } else {
+                    this.selectedCalendars[entry.trim()] = '';
+                }
+            });
+
             // Actualizar módulos con nueva configuración
             Clock.timezone = config.timezone;
             Clock.update();

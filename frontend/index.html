@@ -82,12 +82,17 @@
                 </label>
                 <label>
                     Entidad del clima:
-                    <input type="text" id="weather-entity" placeholder="weather.openweathermap">
+                    <input type="text" id="weather-entity" placeholder="weather.home">
                 </label>
-                <label>
-                    Calendarios (entidad:nombre, uno por línea):
-                    <textarea id="calendar-entities" rows="3" placeholder="calendar.jamp_gold:Personal&#10;calendar.trabajo:Trabajo&#10;calendar.festivos_en_peru:Festivos"></textarea>
-                </label>
+                <div class="calendar-config">
+                    <label>Calendarios:</label>
+                    <div id="calendar-list" class="calendar-list">
+                        <div class="calendar-loading">Configura Home Assistant primero</div>
+                    </div>
+                    <button type="button" id="load-calendars" class="btn-secondary">
+                        <i data-lucide="refresh-cw"></i> Cargar calendarios
+                    </button>
+                </div>
                 <label>
                     Zona horaria:
                     <select id="timezone">
