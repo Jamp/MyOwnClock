@@ -31,7 +31,6 @@ const App = {
         await Clock.init();
         await Weather.init();
         await Calendar.init();
-        await Battery.init();
 
         // Event listeners
         this.setupEventListeners();
@@ -76,10 +75,6 @@ const App = {
                 await Calendar.refresh();
             }
 
-            if (Battery) {
-                Battery.setEnabled(newConfig.showBattery !== false);
-            }
-
             console.log('Configuración remota aplicada');
         });
 
@@ -97,7 +92,6 @@ const App = {
         document.getElementById('ha-token').value = config.haToken || '';
         document.getElementById('weather-entity').value = config.weatherEntity || 'weather.openweathermap';
         document.getElementById('timezone').value = config.timezone || 'America/Lima';
-        document.getElementById('show-battery').checked = config.showBattery !== false;
 
         // Cargar calendarios seleccionados en memoria
         this.selectedCalendars = {};
@@ -319,8 +313,7 @@ const App = {
             haToken: document.getElementById('ha-token').value.trim(),
             weatherEntity: document.getElementById('weather-entity').value.trim(),
             calendarEntities: calendarEntities,
-            timezone: document.getElementById('timezone').value,
-            showBattery: document.getElementById('show-battery').checked
+            timezone: document.getElementById('timezone').value
         };
 
         const success = await Config.save(config);
@@ -343,7 +336,6 @@ const App = {
 
             await Weather.refresh();
             await Calendar.refresh();
-            Battery.setEnabled(config.showBattery);
 
             this.closeConfig();
             console.log('Configuración guardada correctamente');

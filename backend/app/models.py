@@ -15,7 +15,6 @@ class ClockConfig(BaseModel):
     timezone: str = Field(default="America/Lima")
     update_interval: int = Field(default=60000, alias="updateInterval")
     clock_format: str = Field(default="24h", alias="clockFormat")
-    show_battery: bool = Field(default=True, alias="showBattery")
     last_update: Optional[str] = Field(default=None, alias="lastUpdate")
 
     class Config:
@@ -29,7 +28,6 @@ class ClockConfig(BaseModel):
                 "timezone": "America/Lima",
                 "updateInterval": 60000,
                 "clockFormat": "24h",
-                "showBattery": True,
                 "lastUpdate": "2024-01-01T00:00:00"
             }
         }
