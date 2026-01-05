@@ -6,14 +6,47 @@
 const Battery = {
     data: null,
     updateInterval: null,
+    enabled: true,
 
     /**
      * Inicializa el módulo de batería
      */
     async init() {
-        await this.fetchBattery();
-        // Actualizar cada 60 segundos
-        this.startAutoUpdate(60000);
+        // Cargar configuración
+        const config = await Config.get();
+        this.enabled = config.showBattery !== false;
+
+        if (this.enabled) {
+            await this.fetchBattery();
+            // Actualizar cada 60 segundos
+            this.startAutoUpdate(60000);
+        } else {
+            this.hide();
+        }
+    },
+
+    /**
+     * Habilita o deshabilita el indicador de batería
+     */
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        if (enabled) {
+            this.fetchBattery();
+            this.startAutoUpdate(60000);
+        } else {
+            this.stopAutoUpdate();
+            this.hide();
+        }
+    },
+
+    /**
+     * Oculta el indicador de batería
+     */
+    hide() {
+        const container = document.getElementById('battery-indicator');
+        if (container) {
+            container.classList.add('hidden');
+        }
     },
 
     /**
@@ -46,7 +79,7 @@ const Battery = {
         const container = document.getElementById('battery-indicator');
         if (!container) return;
 
-        if (!data || !data.available) {
+        if (!this.enabled || !data || !data.available) {
             container.classList.add('hidden');
             return;
         }

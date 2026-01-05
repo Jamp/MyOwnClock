@@ -12,7 +12,8 @@ const Config = {
         calendarEntities: [],
         timezone: 'America/Lima',
         updateInterval: 60000, // 60 segundos para el clima
-        clockFormat: '24h'
+        clockFormat: '24h',
+        showBattery: true
     },
 
     // API del backend
@@ -108,6 +109,7 @@ const Config = {
             weatherEntity: config.weatherEntity,
             calendarEntities: config.calendarEntities,
             timezone: config.timezone,
+            showBattery: config.showBattery,
             lastUpdate: config.lastUpdate
         });
         // Simple hash
