@@ -271,10 +271,11 @@ body {
 .status-bar {
     position: fixed;
     bottom: 3rem;
-    right: 6rem;
+    right: 50%;
     display: flex;
     align-items: center;
     gap: 15px;
+    transform: translate(50%, 0);
 }
 
 .status-indicator {
