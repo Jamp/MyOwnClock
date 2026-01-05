@@ -7,7 +7,6 @@ Convierte un laptop viejo en un elegante reloj de pared con pronóstico del clim
 - Reloj digital grande y legible con fecha
 - Pronóstico del clima desde Home Assistant (OpenWeatherMap)
 - Eventos de Google Calendar via Home Assistant
-- Indicador de bateria (para laptops)
 - Interfaz oscura optimizada para visualización continua
 - Splash screen personalizado (Plymouth)
 - Modo kiosko con Chromium
@@ -90,8 +89,7 @@ own_clock/
 │       ├── clock.js        # Módulo del reloj
 │       ├── config.js       # Gestión de configuración
 │       ├── weather.js      # Integración clima
-│       ├── calendar.js     # Integración calendario
-│       └── battery.js      # Indicador de batería
+│       └── calendar.js     # Integración calendario
 ├── backend/                # API FastAPI
 │   ├── app/
 │   │   ├── main.py         # Endpoints API
@@ -171,7 +169,6 @@ curl -X POST http://<ip-del-laptop>:8080/api/refresh
 | `/api/weather` | GET | Datos del clima (proxy a HA) |
 | `/api/calendar` | GET | Eventos del calendario (proxy a HA) |
 | `/api/calendars` | GET | Lista de calendarios disponibles |
-| `/api/battery` | GET | Estado de la batería |
 | `/api/refresh` | POST | Forzar actualización del reloj |
 | `/docs` | GET | Documentación Swagger UI |
 
