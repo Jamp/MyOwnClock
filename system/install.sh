@@ -279,10 +279,13 @@ EOF
     # Establecer como tema por defecto
     plymouth-set-default-theme own-clock 2>/dev/null || true
 
-    # Configurar GRUB para splash silencioso
+    # Configurar GRUB para splash silencioso y arranque rápido
     if [[ -f /etc/default/grub ]]; then
         # Backup
         cp /etc/default/grub /etc/default/grub.backup
+
+        # Reducir timeout de GRUB a 1 segundo
+        sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=1/' /etc/default/grub
 
         # Agregar quiet splash si no existe
         if ! grep -q "quiet splash" /etc/default/grub; then
@@ -297,6 +300,38 @@ EOF
     update-initramfs -u 2>/dev/null || true
 
     log_info "Plymouth configurado correctamente"
+}
+
+# Configurar seguridad SSH
+setup_ssh_security() {
+    log_info "Configurando seguridad SSH..."
+
+    SSH_CONFIG="/etc/ssh/sshd_config"
+
+    if [[ -f "$SSH_CONFIG" ]]; then
+        # Backup
+        cp "$SSH_CONFIG" "${SSH_CONFIG}.backup"
+
+        # Deshabilitar acceso root vía SSH
+        if grep -q "^PermitRootLogin" "$SSH_CONFIG"; then
+            sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' "$SSH_CONFIG"
+        elif grep -q "^#PermitRootLogin" "$SSH_CONFIG"; then
+            sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' "$SSH_CONFIG"
+        else
+            echo "PermitRootLogin no" >> "$SSH_CONFIG"
+        fi
+
+        # Reiniciar servicio SSH si está activo
+        if systemctl is-active --quiet sshd 2>/dev/null; then
+            systemctl restart sshd
+        elif systemctl is-active --quiet ssh 2>/dev/null; then
+            systemctl restart ssh
+        fi
+
+        log_info "Acceso SSH root deshabilitado"
+    else
+        log_warn "Configuración SSH no encontrada, omitiendo..."
+    fi
 }
 
 # Mostrar resumen de instalación
@@ -349,6 +384,7 @@ main() {
     setup_systemd_service
     setup_power_management
     setup_plymouth
+    setup_ssh_security
     show_summary
 }
 
