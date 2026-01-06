@@ -6,11 +6,15 @@
 const Calendar = {
     events: [],
     updateInterval: null,
+    timezone: 'America/Lima',
 
     /**
      * Inicializa el módulo del calendario
      */
     async init() {
+        const config = await Config.get();
+        this.timezone = config.timezone || 'America/Lima';
+
         await this.fetchEvents();
         // Actualizar cada 5 minutos
         this.startAutoUpdate(300000);
@@ -131,47 +135,96 @@ const Calendar = {
     },
 
     /**
-     * Formatea la hora del evento
+     * Formatea la hora del evento (en la zona horaria configurada)
      */
     formatEventTime(event) {
         if (event.allDay) {
             return 'Todo el día';
         }
 
-        const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+        const options = {
+            timeZone: this.timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        };
         return event.start.toLocaleTimeString('es-PE', options);
     },
 
     /**
-     * Formatea el nombre del día
+     * Formatea el nombre del día (en la zona horaria configurada)
      */
     formatDayName(date) {
-        const options = { weekday: 'short', day: 'numeric' };
+        const options = {
+            timeZone: this.timezone,
+            weekday: 'short',
+            day: 'numeric'
+        };
         return date.toLocaleDateString('es-PE', options);
     },
 
     /**
-     * Verifica si una fecha es hoy
+     * Obtiene la fecha actual en la zona horaria configurada (solo año-mes-día)
+     */
+    getTodayInTimezone() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: this.timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        return formatter.format(now); // Returns "YYYY-MM-DD"
+    },
+
+    /**
+     * Convierte una fecha a string YYYY-MM-DD en la zona horaria configurada
+     */
+    getDateStringInTimezone(date) {
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: this.timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        return formatter.format(date);
+    },
+
+    /**
+     * Verifica si una fecha es hoy (en la zona horaria configurada)
      */
     isToday(date) {
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
+        const today = this.getTodayInTimezone();
+        const dateStr = this.getDateStringInTimezone(date);
+        return dateStr === today;
     },
 
     /**
-     * Verifica si una fecha es mañana
+     * Verifica si una fecha es mañana (en la zona horaria configurada)
      */
     isTomorrow(date) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return date.toDateString() === tomorrow.toDateString();
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const tomorrowStr = this.getDateStringInTimezone(tomorrow);
+        const dateStr = this.getDateStringInTimezone(date);
+        return dateStr === tomorrowStr;
     },
 
     /**
-     * Verifica si un evento está en curso
+     * Verifica si un evento está en curso (en la zona horaria configurada)
      */
     isHappening(event) {
         const now = new Date();
+
+        // Para eventos de todo el día, comparar solo la fecha
+        if (event.allDay) {
+            const todayStr = this.getTodayInTimezone();
+            const startStr = this.getDateStringInTimezone(event.start);
+            const endStr = this.getDateStringInTimezone(event.end);
+            // El evento está en curso si hoy >= start y hoy < end
+            return todayStr >= startStr && todayStr < endStr;
+        }
+
         return now >= event.start && now <= event.end;
     },
 
