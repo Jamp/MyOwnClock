@@ -53,6 +53,19 @@ const Calendar = {
     },
 
     /**
+     * Parsea una fecha de evento, manejando correctamente eventos de todo el día
+     */
+    parseEventDate(dateTime, date) {
+        if (dateTime) {
+            // Evento con hora específica
+            return new Date(dateTime);
+        }
+        // Evento de todo el día: agregar T12:00:00 para evitar cambios de día por zona horaria
+        // "2026-01-06" -> "2026-01-06T12:00:00" (mediodía, seguro en cualquier zona horaria)
+        return new Date(date + 'T12:00:00');
+    },
+
+    /**
      * Procesa y ordena los eventos
      */
     processEvents(events) {
@@ -63,8 +76,8 @@ const Calendar = {
         return events
             .map(event => ({
                 summary: event.summary || 'Sin título',
-                start: new Date(event.start?.dateTime || event.start?.date),
-                end: new Date(event.end?.dateTime || event.end?.date),
+                start: this.parseEventDate(event.start?.dateTime, event.start?.date),
+                end: this.parseEventDate(event.end?.dateTime, event.end?.date),
                 allDay: !event.start?.dateTime,
                 location: event.location || '',
                 description: event.description || '',
