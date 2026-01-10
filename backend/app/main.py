@@ -228,30 +228,50 @@ async def get_weather():
         )
 
     try:
-        url = f"{config.ha_url}/api/states/{config.weather_entity}"
+        headers = {
+            "Authorization": f"Bearer {config.ha_token}",
+            "Content-Type": "application/json"
+        }
 
         async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
-            response = await client.get(
-                url,
-                headers={
-                    "Authorization": f"Bearer {config.ha_token}",
-                    "Content-Type": "application/json"
+            # Obtener estado actual del clima
+            state_url = f"{config.ha_url}/api/states/{config.weather_entity}"
+            response = await client.get(state_url, headers=headers)
+
+            if response.status_code == 401:
+                raise HTTPException(status_code=401, detail="Token de Home Assistant inválido")
+
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"Entidad '{config.weather_entity}' no encontrada")
+
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Error de Home Assistant: {response.text}"
+                )
+
+            weather_data = response.json()
+
+            # Obtener forecast diario
+            forecast_url = f"{config.ha_url}/api/services/weather/get_forecasts"
+            forecast_response = await client.post(
+                forecast_url,
+                headers=headers,
+                json={
+                    "entity_id": config.weather_entity,
+                    "type": "daily"
                 }
             )
 
-        if response.status_code == 401:
-            raise HTTPException(status_code=401, detail="Token de Home Assistant inválido")
+            if forecast_response.status_code == 200:
+                forecast_result = forecast_response.json()
+                # El resultado viene en formato {entity_id: {forecast: [...]}}
+                entity_forecast = forecast_result.get(config.weather_entity, {})
+                forecast_list = entity_forecast.get("forecast", [])
+                # Agregar forecast a los atributos
+                weather_data.setdefault("attributes", {})["forecast"] = forecast_list
 
-        if response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Entidad '{config.weather_entity}' no encontrada")
-
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=f"Error de Home Assistant: {response.text}"
-            )
-
-        return response.json()
+        return weather_data
 
     except httpx.ConnectError:
         raise HTTPException(status_code=503, detail="No se puede conectar a Home Assistant")
