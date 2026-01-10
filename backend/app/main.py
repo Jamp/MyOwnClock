@@ -254,7 +254,7 @@ async def get_weather():
 
             # Obtener forecast diario
             try:
-                forecast_url = f"{config.ha_url}/api/services/weather/get_forecasts"
+                forecast_url = f"{config.ha_url}/api/services/weather/get_forecasts?return_response"
                 forecast_response = await client.post(
                     forecast_url,
                     headers=headers,
