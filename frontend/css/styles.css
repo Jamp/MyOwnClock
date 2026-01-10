@@ -84,8 +84,7 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
     backdrop-filter: blur(10px);
-    flex: 0 0 auto;
-    max-width: 380px;
+    flex: 1 1 50%;
 }
 
 .weather-icon {
@@ -150,8 +149,7 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
     backdrop-filter: blur(10px);
-    min-width: 550px;
-    flex: 1 1 60%;
+    flex: 1 1 50%;
 }
 
 .calendar-header {
