@@ -148,8 +148,9 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
     backdrop-filter: blur(10px);
-    min-width: 400px;
-    max-width: 500px;
+    min-width: 450px;
+    max-width: 600px;
+    flex: 1;
 }
 
 .calendar-header {
@@ -538,7 +539,8 @@ body {
 
     .calendar-section {
         width: 100%;
-        max-width: 400px;
+        min-width: unset;
+        max-width: 500px;
     }
 }
 
