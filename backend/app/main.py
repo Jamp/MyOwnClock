@@ -253,23 +253,30 @@ async def get_weather():
             weather_data = response.json()
 
             # Obtener forecast diario
-            forecast_url = f"{config.ha_url}/api/services/weather/get_forecasts"
-            forecast_response = await client.post(
-                forecast_url,
-                headers=headers,
-                json={
-                    "entity_id": config.weather_entity,
-                    "type": "daily"
-                }
-            )
+            try:
+                forecast_url = f"{config.ha_url}/api/services/weather/get_forecasts"
+                forecast_response = await client.post(
+                    forecast_url,
+                    headers=headers,
+                    json={
+                        "entity_id": config.weather_entity,
+                        "type": "daily"
+                    }
+                )
 
-            if forecast_response.status_code == 200:
-                forecast_result = forecast_response.json()
-                # El resultado viene en formato {entity_id: {forecast: [...]}}
-                entity_forecast = forecast_result.get(config.weather_entity, {})
-                forecast_list = entity_forecast.get("forecast", [])
-                # Agregar forecast a los atributos
-                weather_data.setdefault("attributes", {})["forecast"] = forecast_list
+                if forecast_response.status_code == 200:
+                    forecast_result = forecast_response.json()
+                    print(f"Forecast response: {forecast_result}")  # Debug log
+                    # El resultado viene en formato {entity_id: {forecast: [...]}}
+                    entity_forecast = forecast_result.get(config.weather_entity, {})
+                    forecast_list = entity_forecast.get("forecast", [])
+                    # Agregar forecast a los atributos
+                    if forecast_list:
+                        weather_data.setdefault("attributes", {})["forecast"] = forecast_list
+                else:
+                    print(f"Forecast error: {forecast_response.status_code} - {forecast_response.text}")
+            except Exception as e:
+                print(f"Error obteniendo forecast: {e}")
 
         return weather_data
 
