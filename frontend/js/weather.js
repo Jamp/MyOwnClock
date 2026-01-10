@@ -78,7 +78,7 @@ const Weather = {
      */
     updateUI(data, errorMessage = null) {
         const tempElement = document.getElementById('temperature');
-        const feelsLikeElement = document.getElementById('feels-like');
+        const tempRangeElement = document.getElementById('temp-range');
         const conditionElement = document.getElementById('weather-condition');
         const iconElement = document.getElementById('weather-icon');
         const humidityElement = document.getElementById('humidity');
@@ -86,7 +86,7 @@ const Weather = {
 
         if (!data || errorMessage) {
             tempElement.textContent = '--°';
-            feelsLikeElement.textContent = '--°';
+            tempRangeElement.textContent = '--° / --°';
             conditionElement.textContent = errorMessage || 'Sin datos';
             humidityElement.textContent = '--%';
             locationElement.textContent = '';
@@ -100,9 +100,18 @@ const Weather = {
         const temp = attrs.temperature;
         tempElement.textContent = temp !== undefined ? `${Math.round(temp)}°` : '--°';
 
-        // Sensación térmica
-        const feelsLike = attrs.apparent_temperature;
-        feelsLikeElement.textContent = feelsLike !== undefined ? `${Math.round(feelsLike)}°` : '--°';
+        // Temperatura máxima y mínima del día (desde el forecast)
+        const forecast = attrs.forecast;
+        if (forecast && forecast.length > 0) {
+            const today = forecast[0];
+            const tempHigh = today.temperature;
+            const tempLow = today.templow;
+            tempRangeElement.textContent = (tempHigh !== undefined && tempLow !== undefined)
+                ? `${Math.round(tempHigh)}° / ${Math.round(tempLow)}°`
+                : '--° / --°';
+        } else {
+            tempRangeElement.textContent = '--° / --°';
+        }
 
         // Condición
         const condition = data.state;
