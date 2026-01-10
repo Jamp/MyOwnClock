@@ -266,9 +266,9 @@ async def get_weather():
 
                 if forecast_response.status_code == 200:
                     forecast_result = forecast_response.json()
-                    print(f"Forecast response: {forecast_result}")  # Debug log
-                    # El resultado viene en formato {entity_id: {forecast: [...]}}
-                    entity_forecast = forecast_result.get(config.weather_entity, {})
+                    # El resultado viene en formato {service_response: {entity_id: {forecast: [...]}}}
+                    service_response = forecast_result.get("service_response", forecast_result)
+                    entity_forecast = service_response.get(config.weather_entity, {})
                     forecast_list = entity_forecast.get("forecast", [])
                     # Agregar forecast a los atributos
                     if forecast_list:
