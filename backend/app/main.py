@@ -10,10 +10,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .models import ClockConfig, SystemInfo, HealthResponse
 from .config_service import config_service
@@ -33,6 +34,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Middleware para deshabilitar caché en archivos estáticos
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Aplicar no-cache a archivos estáticos (css, js, html)
+        if any(request.url.path.endswith(ext) for ext in ['.css', '.js', '.html']) or request.url.path == '/':
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
+app.add_middleware(NoCacheMiddleware)
+
 
 # Ruta al frontend
 FRONTEND_PATH = Path(__file__).parent.parent.parent / "frontend"
